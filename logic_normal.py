@@ -160,8 +160,9 @@ class LogicNormal(object):
                 title_text = getdata.text.split('<div class="bookmark-three-rung-menu-box">')[0]
                 check_title_regex = re.compile(r'<div class=wordfix>.{2}\:\s\<a\shref=.+target=_blank>(?P<market_url>.+)</a>')
             elif u'쿨엔조이' == data.community:
-                title_text = getdata.text.split('<section id="bo_v_link">')[1].split('</section>')[0]
-                check_title_regex = re.compile(r'<strong>(?P<market_url>.+)<\/strong>')
+                if '<section id="bo_v_link">' in getdata.text:
+                    title_text = getdata.text.split('<section id="bo_v_link">')[1].split('</section>')[0]
+                    check_title_regex = re.compile(r'<strong>(?P<market_url>.+)<\/strong>')
             elif u'퀘이사존' == data.community:
                 if u'<th>링크</th>' in getdata.text:
                     title_text = getdata.text.split(u'<th>링크</th>')[1].split('</tr>')[0]
