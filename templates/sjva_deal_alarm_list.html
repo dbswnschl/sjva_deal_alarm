@@ -92,20 +92,31 @@
             tmp = ''
             tmp += '<strong>제목 : </strong>' + data[i].title + '<br>';
             tmp += `<strong>링크 : </strong><a target="_blank" href="${data[i].link}">${data[i].link}</a><br>`;
+            if (data[i].market_link){
+                tmp += `<strong>쇼핑몰 링크 : </strong><a target="_blank" href="${data[i].market_link}">${data[i].market_link}</a><br>`;
+            }
             tmp += '<strong>작성시각 : </strong>' + data[i].pub_date + '<br>';
             right += m_col(9, tmp)
             tmp = data[i].created_time + ' (내용 수신)' + '<br>';
-            switch (data[i].status) {
-                case 1:
-                    tmp += data[i].update_time1 + ' (알람여부 판단중)';
-                    break;
-                case 2:
-                    tmp += data[i].update_time1 + ' (알람 발송)';
-                    break;
-                case -1:
-                    tmp += data[i].update_time1 + ' (알람 패스)';
+            if (data[i].update_time_1) {
+                switch (data[i].status) {
+                    case 1:
+                        tmp += data[i].update_time_1 + ' (알람여부 판단중)';
+                        break;
+                    case 2:
+                        tmp += data[i].update_time_1 + ' (알람 발송)';
+                        break;
+                    case -1:
+                        tmp += data[i].update_time_1 + ' (알람 패스)';
+                }
             }
             tmp += '<br>'
+            if (data[i].update_time_2) {
+                tmp += data[i].update_time_2 + ' (분석 완료)';
+            }
+            tmp += '<br>'
+
+
             right += m_col(3, tmp);
             right += m_row_end();
             str += m_col(10, right);

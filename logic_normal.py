@@ -35,26 +35,31 @@ class LogicNormal(object):
             LogicNormal.process_insert_feed()
             LogicNormal.process_check_rule()
             LogicNormal.process_check_alarm()
+            LogicNormal.process_analysis()
 
         except Exception as e:
             logger.error('Exception:%s', e)
             logger.error(traceback.format_exc())
     @staticmethod
-    def get_crawl(url, regex):
+    def get_crawl(url, regex, header):
         datas = []
         getdata = requests.get(url=url)
-        check_regex = re.compile(regex)
-        for item in check_regex.finditer(getdata.text):
-            data = item.groupdict()
-            link = ModelSetting.get('algumon_url')
-            if link[-1] == '/':
-                link = link[:-1]
-            link += data['link']
-            data['link'] = LogicNormal.get_redirect_url(link)
-            datas.append(data)
+        parsed_datas = getdata.text.split(header)[1:]
+        check_regex = re.compile(regex, re.MULTILINE)
+        for text in parsed_datas:
+            search_result = check_regex.search(text)
+            if search_result:
+                data = search_result.groupdict()
+                link = ModelSetting.get('algumon_url')
+                if link[-1] == '/':
+                    link = link[:-1]
+                link += data['link']
+                data['link'] = LogicNormal.get_redirect_url(link)
+                data['title'] = data['title']
+                datas.append(data)
         if len(datas) == 0:
             logger.error('Did not regex parsing.')
-            logger.error(getdata.text)
+            logger.error(parsed_datas)
         return datas
     @staticmethod
     def get_redirect_url(url):
@@ -63,7 +68,8 @@ class LogicNormal(object):
     def process_insert_feed():
         algumon_url = ModelSetting.get('algumon_url')
         algumon_regex = ModelSetting.get('algumon_regex')
-        datas = LogicNormal.get_crawl(algumon_url, algumon_regex)
+        algumon_header = ModelSetting.get('algumon_header')
+        datas = LogicNormal.get_crawl(algumon_url, algumon_regex, algumon_header)
 
         if len(datas) > 0 :
             if ModelFeed.add_feed(datas) == 'success':
@@ -111,15 +117,17 @@ class LogicNormal(object):
             else:
                 data.status = 1
                 update_datas.append(data)
-        ModelFeed.add_feed(update_datas)
+        ModelFeed.update_feed(update_datas)
     @staticmethod
     def get_message_by_format(data):
+        data.title = data.title.replace('&nbsp;', ' ').replace('&lt;','<').replace('&gt;','>')
+        logger.debug(data.__repr__())
         message_format = ModelSetting.get('message_format')\
             .replace('{title}', data.title)\
             .replace('{link}', data.link)\
             .replace('{pub_date}', str(data.pub_date))\
             .replace('{community}', data.community)\
-            .replace('{market}', data.market)
+            .replace('{market}', data.market if data.market else '정보 없음')
         return message_format
     @staticmethod
     def process_check_alarm():
@@ -140,3 +148,47 @@ class LogicNormal(object):
         except Exception as e:
             logger.error('Exception:%s', e)
             logger.error(traceback.format_exc())
+
+    @staticmethod
+    def process_analysis():
+        datas = ModelFeed.get_analysis_target()
+        update_datas = []
+        for data in datas:
+            getdata = requests.get(url=data.link)
+            check_title_regex = None
+            if u'뽐뿌' == data.community:
+                title_text = getdata.text.split('<div class="bookmark-three-rung-menu-box">')[0]
+                check_title_regex = re.compile(r'<div class=wordfix>.{2}\:\s\<a\shref=.+target=_blank>(?P<market_url>.+)</a>')
+            elif u'쿨엔조이' == data.community:
+                title_text = getdata.text.split('<section id="bo_v_link">')[1].split('</section>')[0]
+                check_title_regex = re.compile(r'<strong>(?P<market_url>.+)<\/strong>')
+            elif u'퀘이사존' == data.community:
+                if u'<th>링크</th>' in getdata.text:
+                    title_text = getdata.text.split(u'<th>링크</th>')[1].split('</tr>')[0]
+                    check_title_regex = re.compile(r'\s>(?P<market_url>.+)</a></td>')
+            elif u'클리앙' == data.community:
+                title_text = getdata.text.split('<link rel="stylesheet')[0]
+                if 'http' in title_text:
+                    check_title_regex = re.compile(r'<meta name=\"description\" content=\".+(?P<market_url>https*:[\w\.\/\?\&\;\=\-\_]+)')
+                elif u'<span class="attached_subject">구매링크</span>' in getdata.text:
+                    title_text = getdata.text.split('<span class="attached_subject">구매링크</span>')[1].split('</div>')
+                    check_title_regex = re.compile(r'>(?P<market_url>https*:[\w\.\/\?\&\;\=\-\_]+)</a>')
+                else:
+                    check_title_regex = None
+            elif u'루리웹' == data.community:
+                if u'원본출처<span class="text_bar"> | </span>' in getdata.text:
+                    title_text = getdata.text.split('원본출처<span class="text_bar"> | </span>')[1].split('</a>')[0]
+                    check_title_regex = re.compile(r'>.*?(?P<market_url>https*:[\w\.\/\?\&\;\=\-\_]+)')
+            elif u'어미새' == data.community:
+                if u'<meta name="description" content="' in getdata.text:
+                    title_text = getdata.text.split('<meta name="description" content="')[1].split('/>')[0]
+                    check_title_regex = re.compile(r'.*?(?P<market_url>https*:[\w\.\/\?\&\;\=\-\_]+)')
+            else:
+                continue
+            matches = check_title_regex.search(title_text) if check_title_regex else None
+            market_url = matches.groupdict()['market_url'].split('&amp;')[0].split('&nbsp;')[0] if matches else None
+            data.market_link = market_url
+            data.update_time_2 = datetime.now()
+            update_datas.append(data)
+        ModelFeed.update_feed(update_datas)
+        pass

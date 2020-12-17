@@ -29,7 +29,7 @@ from .plugin import logger, package_name
 
 app.config['SQLALCHEMY_BINDS'][package_name] = 'sqlite:///%s' % (
     os.path.join(path_app_root, 'data', 'db', '%s.db' % package_name))
-
+logger.debug(app.config['SQLALCHEMY_BINDS'][package_name])
 class ModelSetting(db.Model):
     __tablename__ = '%s_setting' % package_name
     __table_args__ = {'mysql_collate': 'utf8_general_ci'}
@@ -42,7 +42,6 @@ class ModelSetting(db.Model):
     def __init__(self, key, value):
         self.key = key
         self.value = value
-        logger.debug("TABLE INIT :: %s", self.__tablename__)
 
     def __repr__(self):
         return repr(self.as_dict())
@@ -92,7 +91,7 @@ class ModelSetting(db.Model):
         try:
             return Util.db_list_to_dict(db.session.query(ModelSetting).all())
         except Exception as e:
-            logger.error('Exception:%s', e)
+            logger.error('Exception:%s %s', e)
             logger.error(traceback.format_exc())
 
     @staticmethod
@@ -111,6 +110,7 @@ class ModelSetting(db.Model):
         except Exception as e:
             logger.error('Exception:%s', e)
             logger.error(traceback.format_exc())
+            logger.debug('Error Key:%s Value:%s', key, value)
             return False
 
     @staticmethod
@@ -123,13 +123,13 @@ class ModelSetting(db.Model):
         except Exception as e:
             logger.error('Exception:%s', e)
             logger.error(traceback.format_exc())
+            logger.error('Error Key:%s Value:%s', key, value)
 
 class ModelFeed(db.Model):
     __tablename__ = '%s_feed' % package_name
     __table_args__ = {'mysql_collate': 'utf8_general_ci'}
     __bind_key__ = package_name
-    seq_feed_id = db.Sequence('seq_feed_id')
-    feed_id = db.Column(db.Integer, seq_feed_id, server_default=seq_feed_id.next_value(), primary_key=True)
+    feed_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     created_time = db.Column(db.DateTime) # 최초 수집 시간
     update_time_1 = db.Column(db.DateTime) # 알람 검사 시간
     update_time_2 = db.Column(db.DateTime) # 분석시간
@@ -137,6 +137,7 @@ class ModelFeed(db.Model):
     title = db.Column(db.String)
     link = db.Column(db.String)
     market = db.Column(db.String)
+    market_link = db.Column(db.String)
     community = db.Column(db.String)
     poster_url = db.Column(db.String)
     status = db.Column(db.Integer) # -1 : 통과, 0 : 최초, 1 : 알람준비, 2 : 알람완료
@@ -157,9 +158,9 @@ class ModelFeed(db.Model):
     def get_feed(data):
         try:
             if type(data) == dict:
-                query = db.session.query(ModelFeed).filter(ModelFeed.title == data['title'])
+                query = db.session.query(ModelFeed).filter(ModelFeed.link == data['link'])
             else:
-                query = db.session.query(ModelFeed).filter(ModelFeed.title == data.title)
+                query = db.session.query(ModelFeed).filter(ModelFeed.link == data.link)
             return query.all()
         except Exception as e:
             logger.error('Exception:%s', e)
@@ -167,39 +168,58 @@ class ModelFeed(db.Model):
             return []
 
     @staticmethod
-    def add_feed(datas, is_analysis=False): # is first : add, is exist : update
+    def add_feed(datas):
         try:
             for data in datas:
                 entity = ModelFeed.get_feed(data)
+                logger.debug(data.__repr__())
                 if entity is None or len(entity) == 0: # add
                     feed = ModelFeed()
-                    check_time_regex = re.compile(r'(?P<amount>\d+)(?P<time_type>분|시간|일)\s+전')
-                    check_time_result = check_time_regex.search(data['pub_date']).groupdict()
+                    check_time_regex = re.compile(r'(?P<amount>\d+)(?P<time_type>.*?)\s.{1}')
+                    check_time_result = check_time_regex.search(data['pub_date'])
+                    check_time_result = check_time_result.groupdict() if check_time_result else None
                     now = feed.created_time
-                    if check_time_result['time_type'].strip() == u'분':
+                    if check_time_result and check_time_result['time_type'].strip() == u'분':
                         feed.pub_date = now - datetime.timedelta(minutes=int(check_time_result['amount']))
-                    elif check_time_result['time_type'].strip() == u'시간':
+                    elif check_time_result and check_time_result['time_type'].strip() == u'시간':
                         feed.pub_date = now - datetime.timedelta(hours=int(check_time_result['amount']))
-                    elif check_time_result['time_type'].strip() == u'일':
+                    elif check_time_result and check_time_result['time_type'].strip() == u'일':
                         feed.pub_date = now - datetime.timedelta(days=int(check_time_result['amount']))
                     else:
-                        continue
+                        feed.pub_date = now
                     feed.title = data['title']
                     feed.link = data['link']
                     feed.community = data['community']
+                    feed.market = data['market']
+                    feed.poster_url = data['poster_url']
                     db.session.add(feed)
-                else: # update
-                    if type(data) == dict:
-                        feed = db.session.query(ModelFeed).filter(ModelFeed.title==data['title']).first()
-                        feed.status = data['status']
-                    else:
-                        feed = db.session.query(ModelFeed).filter(ModelFeed.title==data.title).first()
-                        feed.status = data.status
-                    if is_analysis:
-                        feed.update_time_2 = datetime.datetime.now()
-                    else:
-                        feed.update_time_1 = datetime.datetime.now()
+
             db.session.commit()
+            return 'success'
+        except Exception as e:
+            logger.error('Exception:%s', e)
+            logger.error(traceback.format_exc())
+            return 'fail'
+
+    @staticmethod
+    def update_feed(datas, is_analysis=False):
+        try:
+            for data in datas:
+                entity = ModelFeed.get_feed(data)
+                if entity and len(entity) > 0:
+                    if type(data) == dict:
+                        r = db.session.query(ModelFeed).filter(ModelFeed.link == data['link']).first()
+                        r.status = data['status']
+                    else:
+                        r = db.session.query(ModelFeed).filter(ModelFeed.link == data.link).first()
+                        r.status = data.status
+                    if is_analysis:
+                        r.update_time_2 = datetime.datetime.now()
+                    else:
+                        r.update_time_1 = datetime.datetime.now()
+                    r.update_time = datetime.datetime.now()
+                    db.session.commit()
+
             return 'success'
         except Exception as e:
             logger.error('Exception:%s', e)
@@ -270,7 +290,17 @@ class ModelFeed(db.Model):
             query = query.filter(ModelFeed.status == -1)
 
         if order == 'desc':
-            query = query.order_by(desc(ModelFeed.feed_id))
+            query = query.order_by(desc(ModelFeed.pub_date))
         else:
-            query = query.order_by(ModelFeed.feed_id)
+            query = query.order_by(ModelFeed.pub_date)
         return query
+
+    @staticmethod
+    def get_analysis_target():
+        try:
+            query = db.session.query(ModelFeed).filter(ModelFeed.update_time_2 == None)
+            return query.all()
+        except Exception as e:
+            logger.error('Exception:%s', e)
+            logger.error(traceback.format_exc())
+            return []

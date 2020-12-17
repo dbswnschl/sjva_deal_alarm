@@ -26,7 +26,8 @@ class Logic(object):
         'interval': '1',
         'allow_duplicate': 'True',
         'algumon_url' : 'https://algumon.com',
-        'algumon_regex' : r'<a href=\"(?P<link>.+)\"\s.+data-label=\"(?P<title>[\w\W]*?)\"\sdata-product[\w\W]*?\ <img src=\"(?P<poster_url>.+)\"\salt=[\w\W]*?\<span class=\"label\sshop\"\>\<a\shref=.+\>(?P<market>.+)\</a\>\<\/span\>\s+\<span class=\"label\ssite\"\>(?P<community>.+)\</span\>[\w\W]*?</i>\s(?P<pub_date>\w+\s+\w)',
+        'algumon_regex' : r'<a href=\"(?P<link>.*?)\"\s.+data-label=\"(?P<title>.*?)\"\sdata-product=\"\d+\"[\w\W]*?\s(?:<img src=\"(?P<poster_url>.+)\"\salt=[\w\W]*?)*\<span class=\"label\sshop\"\>(?:\<a\shref=\".*?\"\>(?P<market>.+)<\/a\>|.{5})\<\/span\>\s+\<span class=\"label\ssite\"\>(?P<community>.+)\<\/span\>[\w\W]*?<\/i>\s(?P<pub_date>.+\s+.|.{2})\n',
+        'algumon_header':'<li class=\"left clearfix',
         'include_keyword' : '',
         'exclude_keyword' : '',
         'include_all': 'True',
@@ -69,7 +70,7 @@ class Logic(object):
     def scheduler_start():
         try:
             logger.debug('%s scheduler_start' % package_name)
-            job = Job(package_name, package_name, ModelSetting.get('interval'), Logic.scheduler_function, u"뽐부 알리미",
+            job = Job(package_name, package_name, ModelSetting.get('interval'), Logic.scheduler_function, u"핫딜 알리미",
                       False)
             scheduler.add_job_instance(job)
         except Exception as e:
