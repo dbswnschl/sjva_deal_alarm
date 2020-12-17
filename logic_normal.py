@@ -189,6 +189,10 @@ class LogicNormal(object):
                 if u'<meta name="description" content="' in getdata.text:
                     title_text = getdata.text.split('<meta name="description" content="')[1].split('/>')[0]
                     check_title_regex = re.compile(r'.*?(?P<market_url>https*:[\w\.\/\?\&\;\=\-\_]+)')
+            elif u'딜바다' == data.community:
+                if u'<div id="bo_v_con">' in getdata.text:
+                    title_text = getdata.text.split('<div id="bo_v_con">')[1].split('</div>')[0]
+                    check_title_regex = re.compile(r'.*?>(?P<market_url>https*:[\w\.\/\?\&\;\=\-\_]+)')
             else:
                 continue
             matches = check_title_regex.search(title_text) if check_title_regex else None
