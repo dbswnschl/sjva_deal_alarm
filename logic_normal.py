@@ -174,11 +174,12 @@ class LogicNormal(object):
                     logger.error(getdata.text)
             elif u'클리앙' == data.community:
                 title_text = getdata.text.split('<link rel="stylesheet')[0]
-                if 'http' in title_text:
-                    check_title_regex = re.compile(r'<meta name=\"description\" content=\".+(?P<market_url>https*:[\w\.\/\?\&\;\=\-\_]+)')
-                elif u'<span class="attached_subject">구매링크</span>' in getdata.text:
+                if u'<span class="attached_subject">구매링크</span>' in getdata.text:
                     title_text = getdata.text.split('<span class="attached_subject">구매링크</span>')[1].split('</div>')
                     check_title_regex = re.compile(r'>(?P<market_url>https*:[\w\.\/\?\&\;\=\-\_]+)</a>')
+                elif 'http' in title_text:
+                    check_title_regex = re.compile(
+                        r'<meta name=\"description\" content=\".+(?P<market_url>https*:[\w\.\/\?\&\;\=\-\_]+)')
                 else:
                     check_title_regex = None
             elif u'루리웹' == data.community:
@@ -190,7 +191,10 @@ class LogicNormal(object):
                     title_text = getdata.text.split('<meta name="description" content="')[1].split('/>')[0]
                     check_title_regex = re.compile(r'.*?(?P<market_url>https*:[\w\.\/\?\&\;\=\-\_]+)')
             elif u'딜바다' == data.community:
-                if u'<div id="bo_v_con">' in getdata.text:
+                if u'alt=\"관련링크\"' in getdata.text:
+                    title_text = getdata.text.split(u'alt=\"관련링크\"')[1].split('</strong>')[0]
+                    check_title_regex = re.compile(r'.*?>(?P<market_url>https*:[\w\.\/\?\&\;\=\-\_]+)')
+                elif u'<div id="bo_v_con">' in getdata.text:
                     title_text = getdata.text.split('<div id="bo_v_con">')[1].split('</div>')[0]
                     check_title_regex = re.compile(r'.*?>(?P<market_url>https*:[\w\.\/\?\&\;\=\-\_]+)')
             else:
