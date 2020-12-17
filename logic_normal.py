@@ -167,6 +167,9 @@ class LogicNormal(object):
                 if u'<th>링크</th>' in getdata.text:
                     title_text = getdata.text.split(u'<th>링크</th>')[1].split('</tr>')[0]
                     check_title_regex = re.compile(r'\s>(?P<market_url>.+)</a></td>')
+                elif u'<div class="view-content">' in getdata.text:
+                    title_text = getdata.text.split(u'<div class="view-content">')[1].split('</div>')[0]
+                    check_title_regex = re.compile(r'.*?>(?P<market_url>https*:[\w\.\/\?\&\;\=\-\_]+)')
             elif u'클리앙' == data.community:
                 title_text = getdata.text.split('<link rel="stylesheet')[0]
                 if 'http' in title_text:
