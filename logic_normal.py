@@ -156,6 +156,7 @@ class LogicNormal(object):
         for data in datas:
             getdata = requests.get(url=data.link)
             check_title_regex = None
+            title_text = None
             if u'뽐뿌' == data.community:
                 title_text = getdata.text.split('<div class="bookmark-three-rung-menu-box">')[0]
                 check_title_regex = re.compile(r'<div class=wordfix>.{2}\:\s\<a\shref=.+target=_blank>(?P<market_url>.+)</a>')
@@ -199,7 +200,7 @@ class LogicNormal(object):
                     check_title_regex = re.compile(r'.*?>(?P<market_url>https*:[\w\.\/\?\&\;\=\-\_]+)')
             else:
                 continue
-            matches = check_title_regex.search(title_text) if check_title_regex else None
+            matches = check_title_regex.search(title_text) if check_title_regex and title_text else None
             market_url = matches.groupdict()['market_url'].split('&amp;')[0].split('&nbsp;')[0] if matches else None
             data.market_link = market_url
             data.update_time_2 = datetime.now()
