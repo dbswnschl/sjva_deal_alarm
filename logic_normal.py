@@ -200,10 +200,17 @@ class LogicNormal(object):
                     check_title_regex = re.compile(r'.*?>(?P<market_url>https*:[\w\.\/\?\&\;\=\-\_]+)')
             else:
                 continue
-            matches = check_title_regex.search(title_text) if check_title_regex and title_text else None
-            market_url = matches.groupdict()['market_url'].split('&amp;')[0].split('&nbsp;')[0] if matches else None
-            data.market_link = market_url
-            data.update_time_2 = datetime.now()
-            update_datas.append(data)
+            try:
+                matches = check_title_regex.search(title_text) if check_title_regex and title_text else None
+                market_url = matches.groupdict()['market_url'].split('&amp;')[0].split('&nbsp;')[0] if matches else None
+                data.market_link = market_url
+                data.update_time_2 = datetime.now()
+                update_datas.append(data)
+            except Exception as e:
+                logger.error('Exception:%s', e)
+                logger.error(traceback.format_exc())
+                if title_text:
+                    logger.error(title_text)
+
         ModelFeed.update_feed(update_datas)
         pass
