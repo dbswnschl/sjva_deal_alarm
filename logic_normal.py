@@ -201,7 +201,8 @@ class LogicNormal(object):
             else:
                 continue
             try:
-                matches = check_title_regex.search(title_text) if check_title_regex and title_text else None
+
+                matches = check_title_regex.search(str(title_text)) if check_title_regex and title_text else None
                 market_url = matches.groupdict()['market_url'].split('&amp;')[0].split('&nbsp;')[0] if matches else None
                 data.market_link = market_url
                 data.update_time_2 = datetime.now()
