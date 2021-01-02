@@ -20,7 +20,7 @@ from framework.job import Job
 from framework.util import Util
 from framework.common.rss import RssUtil
 from system.logic import SystemLogic
-import framework.common.notify as Notify
+from tool_base import ToolBaseNotify
 
 # 패키지
 from .plugin import logger, package_name
@@ -144,7 +144,7 @@ class LogicNormal(object):
     def process_send_alarm(message):
         try:
             bot_id = ModelSetting.get('bot_id')
-            Notify.send_message(message, message_id=bot_id)
+            ToolBaseNotify.send_message(message, message_id=bot_id)
         except Exception as e:
             logger.error('Exception:%s', e)
             logger.error(traceback.format_exc())
@@ -173,6 +173,7 @@ class LogicNormal(object):
                         check_title_regex = re.compile(r'.*?>(?P<market_url>https*:[\w\.\/\?\&\;\=\-\_]+)')
                 else:
                     logger.error(getdata.text)
+                    logger.error(traceback.format_exc())
             elif u'클리앙' == data.community:
                 title_text = getdata.text.split('<link rel="stylesheet')[0]
                 if u'<span class="attached_subject">구매링크</span>' in getdata.text:
@@ -202,9 +203,9 @@ class LogicNormal(object):
                 continue
             try:
 
-                matches = check_title_regex.search(str(title_text)) if check_title_regex and title_text else None
+                matches = check_title_regex.search(str(title_text).decode('utf-8')) if check_title_regex and title_text else None
                 market_url = matches.groupdict()['market_url'].split('&amp;')[0].split('&nbsp;')[0] if matches else None
-                data.market_link = market_url
+                data.market_link = market_url.decode('utf-8') if market_url else None
                 data.update_time_2 = datetime.now()
                 update_datas.append(data)
             except Exception as e:
