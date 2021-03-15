@@ -7,6 +7,7 @@
     <nav>
         {{ macros.m_tab_head_start() }}
         {{ macros.m_tab_head2('normal', '일반', true) }}
+        {{ macros.m_tab_head2('lp', '링크 프라이스', false) }}
         {{ macros.m_tab_head2('action', '기타', false) }}
         {{ macros.m_tab_head_end() }}
     </nav>
@@ -34,6 +35,17 @@
             {{ macros.setting_checkbox('auto_start', '시작시 자동실행', value=arg['auto_start'], desc='On : 시작시 자동으로 스케쥴러에
             등록됩니다.') }}
             {{ macros.m_tab_content_end() }}
+            {{ macros.m_tab_content_start('lp', false) }}
+            {{ macros.setting_input_text('lp_id', '링크 프라이스 ID', value=arg['lp_id'], placeholder=arg['lp_id'],
+            desc=['링크 프라이스 사이트 코드를 가져오는 데 사용됩니다.']) }}
+            {{ macros.setting_input_text('lp_pw', '링크 프라이스 PW', value=arg['lp_pw'], placeholder=arg['lp_pw'],
+            desc=['링크 프라이스 사이트 코드를 가져오는 데 사용됩니다.'], type='password') }}
+            {{ macros.setting_button([['get_lp_site_code', '사이트 코드 가져오기']], left='사이트 코드 가져오기 (selenium 사용)')}}
+            {{ macros.setting_input_text('lp_site_code', '링크 프라이스 사이트 코드', value=arg['lp_site_code'],
+            placeholder=arg['lp_site_code'],
+            desc=['링크 프라이스 사이트 코드']) }}
+            {{ macros.setting_checkbox('use_bot_lp_url', '가능한 경우 쇼핑몰 URL 변환', value=arg['use_bot_lp_url'], desc='On : 쇼핑몰 url을 링크프라이스 제휴 url로 변환합니다. (가능한 경우만)') }}
+            {{ macros.m_tab_content_end() }}
             {{ macros.m_tab_content_start('action', false) }}
             {{ macros.setting_button([['global_one_execute_btn', '1회 실행']], left='1회 실행' ) }}
             {{ macros.setting_button([['global_reset_db_btn', '목록 전체 지우기']], left='DB정리' ) }}
@@ -45,7 +57,33 @@
 <script type="text/javascript">
     var package_name = "{{arg['package_name'] }}";
 
-    $(document).ready(function () {
+    $(document).ready(()=> {
+        $('#get_lp_site_code').off('click').click((evt) => {
+            let lp_id = $('#lp_id').val();
+            let lp_pw = $('#lp_pw').val();
+            console.log(`/${package_name}/ajax/get_lp_site_code`);
+            if (lp_id.length > 0 && lp_pw.length > 0) {
+                $.ajax({
+                    url: `/${package_name}/ajax/get_lp_site_code`,
+                    type: 'POST',
+                    cache: false,
+                    data: {
+                        lp_id: lp_id,
+                        lp_pw: lp_pw
+                    },
+                    dataType: 'json'
+                }).done((res)=>{
+                        $('#lp_site_code').val(res.result);
+                        $.notify(`<strong>링크프라이스 사이트 코드를 가져오는데 성공했습니다</strong>`, {type: 'info'});
+                }).fail((res2)=>{
+                        $.notify(`<strong>링크프라이스 사이트 코드를 가져오는데 실패했습니다.</strong>`, {type: 'danger'});
+                        console.log(res2);
+                });
+            } else {
+                $.notify(`<strong>링크프라이스 정보를 입력해 주세요.</strong>`, {type: 'danger'});
+            }
+            return false;
+        })
     });
 
 </script>

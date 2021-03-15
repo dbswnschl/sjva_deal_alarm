@@ -128,6 +128,10 @@ class LogicNormal(object):
             .replace('{pub_date}', str(data.pub_date))\
             .replace('{community}', data.community)\
             .replace('{market}', data.market if data.market else '정보 없음')
+
+        if type(message_format) != str:
+            message_format = message_format.encode('utf-8')
+        message_format = message_format.replace('\\n','\n')
         return message_format
     @staticmethod
     def process_check_alarm():
@@ -206,6 +210,9 @@ class LogicNormal(object):
                 matches = check_title_regex.search(str(title_text).decode('utf-8')) if check_title_regex and title_text else None
                 market_url = matches.groupdict()['market_url'].split('&amp;')[0].split('&nbsp;')[0] if matches else None
                 data.market_link = market_url.decode('utf-8') if market_url else None
+
+                if data.market_link and ModelSetting.get_bool('use_bot_lp_url'):
+                    data.market_link = LogicNormal.convert_link_price(data.market_link)
                 data.update_time_2 = datetime.now()
                 update_datas.append(data)
             except Exception as e:
@@ -216,3 +223,16 @@ class LogicNormal(object):
 
         ModelFeed.update_feed(update_datas)
         pass
+    @staticmethod
+    def convert_link_price(mall_link):
+        a_id = ModelSetting.get('lp_site_code')
+        result = mall_link
+        if mall_link and len(mall_link) > 0 and a_id and len(a_id) > 0:
+            import urllib
+            encoded_url = urllib.quote(mall_link.encode('utf-8'))
+            url = 'http://api.linkprice.com/ci/service/custom_link_xml?a_id={a_id}&url={encoded_url}&mode=json'.format(a_id=a_id,encoded_url=encoded_url)
+            sess = requests.session()
+            json_result = sess.get(url).json()
+            if 'S' in json_result['result'].upper():
+                result = json_result['url']
+        return result

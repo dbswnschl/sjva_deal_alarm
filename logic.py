@@ -32,7 +32,11 @@ class Logic(object):
         'exclude_keyword' : '',
         'include_all': 'True',
         'message_format': '[{title}] : {link}',
-        'bot_id' : 'bot_sjva_deal_alarm'
+        'bot_id' : 'bot_sjva_deal_alarm',
+        'use_bot_lp_url': 'False',
+        'lp_id' : '',
+        'lp_pw' : '',
+        'lp_site_code' : ''
     }
 
     @staticmethod
